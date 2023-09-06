@@ -17,7 +17,7 @@ fn main() {
 
   let directory = get_teamfortress2_path();
 
-  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.2.2\n").yellow());
+  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.2.3\n").yellow());
 
   let args: Vec<String> = env::args().collect();
 
