@@ -75,7 +75,7 @@ fn check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) -> 
   Ok(())
 }
 
-fn do_check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool, fastdl_url: &String) {
+fn do_check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) {
   if has_map(directory, nextmap) {
     // if emojis {
     //   println!("{}", style("/").green());
@@ -117,14 +117,14 @@ fn parse_server(directory: &PathBuf, server:&Server) {
         Some(info) => {
           println!("{} [{}] {} -> {}", &server.name, colourise_players(info.players, info.max_players), map_exists_symbol(&directory, &info.map), map_exists_symbol(&directory, &nextmap));
           if let Some(fastdl_url) = &server.fastdl {
-            do_check_nextmap(directory, nextmap, true, fastdl_url);
-            do_check_nextmap(directory, &info.map, false, fastdl_url);
+            do_check_nextmap(directory, nextmap, fastdl_url);
+            do_check_nextmap(directory, &info.map, fastdl_url);
           }
         },
         None => {
           println!("{} [?/?] ? -> {} {}", &server.name, nextmap, map_exists_symbol(&directory, &nextmap));
           if let Some(fastdl_url) = &server.fastdl {
-            do_check_nextmap(directory, nextmap, true, fastdl_url);
+            do_check_nextmap(directory, nextmap, fastdl_url);
           }
         }
       }
