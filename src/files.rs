@@ -122,7 +122,7 @@ fn format_map_name(map: &str) -> String {
   }
 }
 
-pub fn has_map(directory: &PathBuf, map: String) -> bool {
+pub fn has_map(directory: &PathBuf, map: &String) -> bool {
   let file_name = format_map_name(&map);
 
   let files = get_files(directory);

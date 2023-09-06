@@ -31,12 +31,12 @@ pub fn colourise_players(players:isize, max_players:isize) -> StyledObject<std::
   }
 }
 
-fn get_uris(directory:&str, nextmap: &str) -> (String, String) {(
-  format!("https://ewr1.vultrobjects.com/tf2maps-maps/maps/{}.bsp.bz2", nextmap),
+fn get_uris(directory:&str, fastdl_url:&str, nextmap: &str) -> (String, String) {(
+  format!("{}{}.bsp.bz2", fastdl_url, nextmap),
   format!("{}\\{}.bsp.bz2", directory, nextmap)
 )}
 
-fn check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) -> Result<(), Box<dyn std::error::Error>> {
   print!("{}", style(format!("Downloading {}.bsp.bz2... ", nextmap)).cyan());
 
   let destination_directory = "temp";
@@ -45,7 +45,7 @@ fn check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool) -> Result<
     fs::create_dir(destination_directory)?;
   }
 
-  let (url, destination) = get_uris(destination_directory, nextmap);
+  let (url, destination) = get_uris(destination_directory, fastdl_url, nextmap);
 
   let mut response = reqwest::blocking::get(url)?;
   let mut file = fs::File::create(destination)?;
@@ -75,22 +75,22 @@ fn check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool) -> Result<
   Ok(())
 }
 
-fn do_check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool) {
-  if has_map(directory, nextmap.clone()) {
-    if emojis {
-      println!("✅");
-    }
+fn do_check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool, fastdl_url: &String) {
+  if has_map(directory, nextmap) {
+    // if emojis {
+    //   println!("{}", style("/").green());
+    // }
   } else {
-    if emojis {
-      println!("❌");
-    }
-    match check_nextmap(directory, nextmap, emojis) {
+    // if emojis {
+    //   println!("{}", style("X").red());
+    // }
+    match check_nextmap(directory, nextmap, fastdl_url) {
       Ok(_) => {
-          println!("{}", style("✅ Downloaded and unzipped successfully!").cyan());
+          println!("{} {}", style("/").green(), style("Downloaded and unzipped successfully!").cyan());
           let _ = fs::remove_file(format!("temp\\{}.bsp.bz2", nextmap));
       },
       Err(e) => {
-        println!("{}", style("❌ Download failed!").red());
+        println!("{} {}", style("X").red(), style("Download failed!").red());
         eprintln!("\t{}", style(e).red());
 
         let _ = fs::remove_file(format!("temp\\{}.bsp.bz2", nextmap));
@@ -101,25 +101,36 @@ fn do_check_nextmap(directory: &PathBuf, nextmap: &String, emojis: bool) {
   }
 }
 
+fn map_exists_symbol(directory: &PathBuf, map: &String) -> StyledObject<std::string::String> {
+  if has_map(directory, map) {
+    style(map.clone()).green()
+  } else {
+    style(map.clone()).red()
+  }
+}
+
 fn parse_server(directory: &PathBuf, server:&Server) {
   match &server.nextmap {
     Some(nextmap) => {
+      // println!("{} {:?}", nextmap, &server.info);
       match &server.info {
         Some(info) => {
-          print!("{}:{} [{}] {} -> {} ", &server.address, server.port, colourise_players(info.players, info.max_players), info.map, nextmap);
-          // let _ = check_nextmap(directory, nextmap, true);
-          // let _ = check_nextmap(directory, &info.map, false);
-          do_check_nextmap(directory, nextmap, true);
-          do_check_nextmap(directory, &info.map, false);
+          println!("{} [{}] {} -> {}", &server.name, colourise_players(info.players, info.max_players), map_exists_symbol(&directory, &info.map), map_exists_symbol(&directory, &nextmap));
+          if let Some(fastdl_url) = &server.fastdl {
+            do_check_nextmap(directory, nextmap, true, fastdl_url);
+            do_check_nextmap(directory, &info.map, false, fastdl_url);
+          }
         },
         None => {
-          print!("{}:{} [?/?] ? -> {} ", &server.address, server.port, nextmap);
-          let _ = check_nextmap(directory, nextmap, true);
+          println!("{} [?/?] ? -> {} {}", &server.name, nextmap, map_exists_symbol(&directory, &nextmap));
+          if let Some(fastdl_url) = &server.fastdl {
+            do_check_nextmap(directory, nextmap, true, fastdl_url);
+          }
         }
       }
     },
     None => {
-      println!("{}:{} Offline", &server.address, server.port);
+      println!("{} Offline", &server.name);
     }
   }
 }
@@ -131,6 +142,7 @@ pub fn check_servers(directory: &PathBuf) {
         Ok(servers) => {
           println!("");
           for server in servers {
+            // println!("{}:{}", &server.address, server.port);
             parse_server(directory, &server);
           }
         },

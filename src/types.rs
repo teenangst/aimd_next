@@ -29,4 +29,5 @@ pub struct Server {
   pub name: String,
   pub nextmap: Option<String>,
   pub info: Option<ServerInfo>,
+  pub fastdl: Option<String>,
 }
