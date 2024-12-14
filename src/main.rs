@@ -17,7 +17,7 @@ fn main() {
 
   let _ = winconsole::console::set_title("Automatic Imps Map Downloader:Next");
 
-  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.2.3\nUsing Server API v3\n").yellow());
+  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.3\nUsing Server API v3\n").yellow());
 
   let directory = get_teamfortress2_path();
 
