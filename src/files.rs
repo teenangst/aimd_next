@@ -19,6 +19,35 @@ pub fn check_directory(directory: &PathBuf) -> bool {
   }
 }
 
+pub fn get_temp_folder(maps_directory: &PathBuf) -> PathBuf {
+  maps_directory.join("../../../aimd_temp")
+}
+
+fn delete_all_files_in_dir(
+  dir: PathBuf,
+) -> io::Result<()> {
+  if !dir.is_dir() {
+    return Err(io::Error::new(
+      io::ErrorKind::InvalidInput,
+      "Provided path is not a directory",
+    ));
+  }
+
+  for entry in fs::read_dir(dir)? {
+    let entry = entry?;
+    let path = entry.path();
+    if path.is_file() {
+      fs::remove_file(path)?;
+    }
+  }
+
+  Ok(())
+}
+
+pub fn empty_temp_folder(maps_directory: &PathBuf) -> io::Result<()> {
+  delete_all_files_in_dir(get_temp_folder(maps_directory))
+}
+
 pub fn get_path_from_user() -> PathBuf {
   println!("Unable to automatically locate Steam directory. Please enter the path to your Team Fortress 2 folder:");
   println!("{}", style("It will look something like this: G:\\SteamLibrary\\steamapps\\common\\Team Fortress 2").white().dim());

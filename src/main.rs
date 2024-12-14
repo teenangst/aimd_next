@@ -2,6 +2,7 @@ mod types;
 
 mod files;
 use console::style;
+use files::empty_temp_folder;
 use files::get_teamfortress2_path;
 
 mod server_status;
@@ -12,12 +13,17 @@ use std::thread;
 use std::time::Duration;
 
 fn main() {
+  std::fs::create_dir_all("./some/dir").unwrap();
 
   let _ = winconsole::console::set_title("Automatic Imps Map Downloader:Next");
 
+  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.2.3\nUsing Server API v3\n").yellow());
+
   let directory = get_teamfortress2_path();
 
-  println!("{}",style("Automatic Imps Map Downloader:Next made by Skylark/Racc\nIcon made by Tumby\nVersion 1.2.3\n").yellow());
+  if let Err(e) = empty_temp_folder(&directory) {
+    eprintln!("Was unable to clear temp directory.");
+  }
 
   let args: Vec<String> = env::args().collect();
 
@@ -34,11 +40,11 @@ fn main() {
             continue;
           }
         }
-        println!("Invalid or missing value for -i/--interval flag.");
+        eprintln!("Invalid or missing value for -i/--interval flag.");
         return;
       }
       _ => {
-        println!("Unknown argument: {}", args[i]);
+        eprintln!("Unknown argument: {}", args[i]);
         return;
       }
     }

@@ -1,12 +1,12 @@
-use std::{path::{PathBuf, Path}, fs::{self, File}, io::{self, Read, Write}, thread, time::Duration};
+use std::{env, fs::{self, File}, io::{self, Read, Write}, path::{Path, PathBuf}, thread, time::Duration};
 
-use crate::{types::Server, files::has_map};
+use crate::{files::{get_temp_folder, has_map}, types::Server};
 use bzip2::read::BzDecoder;
 // use bzip2_rs::DecoderReader;
 use console::{style, StyledObject};
 
 fn fetch_servers() -> Result<Result<Vec<Server>, serde_json::Error>, reqwest::Error> {
-  let api_url = "https://api.skylarkx.uk/tf2mapsservers?info&nextmap";
+  let api_url = "https://bot.tf2maps.net/api/v3/servers/";
 
   let response = reqwest::blocking::get(api_url)?;
 
@@ -31,24 +31,38 @@ pub fn colourise_players(players:isize, max_players:isize) -> StyledObject<std::
   }
 }
 
-fn get_uris(directory:&str, fastdl_url:&str, nextmap: &str) -> (String, String) {(
-  format!("{}{}.bsp.bz2", fastdl_url, nextmap),
-  format!("{}\\{}.bsp.bz2", directory, nextmap)
+fn get_uris(directory:&PathBuf, fastdl_url:&str, nextmap: &str) -> (String, String, PathBuf) {(
+  format!("{fastdl_url}/{nextmap}.bsp.bz2"),
+  format!("https://sjc1.vultrobjects.com/tf2maps-maps/maps/{nextmap}.bsp.bz2"),
+  directory.join(format!("{nextmap}.bsp.bz2"))
 )}
 
 fn check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) -> Result<(), Box<dyn std::error::Error>> {
   print!("{}", style(format!("Downloading {}.bsp.bz2... ", nextmap)).cyan());
 
-  let destination_directory = "temp";
+  let destination_directory = get_temp_folder(directory);
 
-  if !Path::new(destination_directory).exists() {
-    fs::create_dir(destination_directory)?;
+  if !destination_directory.exists() {
+    fs::create_dir_all(&destination_directory)?;
   }
 
-  let (url, destination) = get_uris(destination_directory, fastdl_url, nextmap);
+  let (
+    url,
+    backup_url,
+    destination
+  ) = get_uris(&destination_directory, fastdl_url, nextmap);
 
-  let mut response = reqwest::blocking::get(url)?;
-  let mut file = fs::File::create(destination)?;
+  let mut response = {
+    let res = reqwest::blocking::get(url)?;
+
+    if res.status().is_client_error() || res.status().is_server_error() {
+      println!("\nfastdl error, using vultr fallback.");
+      reqwest::blocking::get(backup_url)?
+    } else {
+      res
+    }
+  };
+  let mut file = fs::File::create(&destination)?;
 
   if let Some(content_length) = response.content_length() {
     let content_length_mb = content_length as f64 / (1024.0 * 1024.0);
@@ -63,7 +77,8 @@ fn check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) -> 
   thread::sleep(Duration::from_secs(1));
 
   let unzip_destination = directory.join(format!("{}.bsp", nextmap));
-  let compressed_file = File::open(format!("temp\\{}.bsp.bz2", nextmap))?;
+  // let compressed_file = File::open(format!("temp\\{}.bsp.bz2", nextmap))?;
+  let compressed_file = File::open(&destination)?;
   let mut decompressor = BzDecoder::new(compressed_file);
 
   let mut uncompressed_data = Vec::new();
@@ -76,14 +91,7 @@ fn check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) -> 
 }
 
 fn do_check_nextmap(directory: &PathBuf, nextmap: &String, fastdl_url: &String) {
-  if has_map(directory, nextmap) {
-    // if emojis {
-    //   println!("{}", style("/").green());
-    // }
-  } else {
-    // if emojis {
-    //   println!("{}", style("X").red());
-    // }
+  if !has_map(directory, nextmap) {
     match check_nextmap(directory, nextmap, fastdl_url) {
       Ok(_) => {
           println!("{} {}", style("/").green(), style("Downloaded and unzipped successfully!").cyan());
@@ -112,21 +120,10 @@ fn map_exists_symbol(directory: &PathBuf, map: &String) -> StyledObject<std::str
 fn parse_server(directory: &PathBuf, server:&Server) {
   match &server.nextmap {
     Some(nextmap) => {
-      // println!("{} {:?}", nextmap, &server.info);
-      match &server.info {
-        Some(info) => {
-          println!("{} [{}] {} -> {}", &server.name, colourise_players(info.players, info.max_players), map_exists_symbol(&directory, &info.map), map_exists_symbol(&directory, &nextmap));
-          if let Some(fastdl_url) = &server.fastdl {
-            do_check_nextmap(directory, nextmap, fastdl_url);
-            do_check_nextmap(directory, &info.map, fastdl_url);
-          }
-        },
-        None => {
-          println!("{} [?/?] ? -> {} {}", &server.name, nextmap, map_exists_symbol(&directory, &nextmap));
-          if let Some(fastdl_url) = &server.fastdl {
-            do_check_nextmap(directory, nextmap, fastdl_url);
-          }
-        }
+      println!("{} [{}] {} -> {}", &server.name, colourise_players(server.players, server.max_players), map_exists_symbol(&directory, &server.map), map_exists_symbol(&directory, &nextmap));
+      if let Some(fastdl_url) = &server.fastdl {
+        do_check_nextmap(directory, nextmap, fastdl_url);
+        do_check_nextmap(directory, &server.map, fastdl_url);
       }
     },
     None => {
@@ -142,7 +139,6 @@ pub fn check_servers(directory: &PathBuf) {
         Ok(servers) => {
           println!("");
           for server in servers {
-            // println!("{}:{}", &server.address, server.port);
             parse_server(directory, &server);
           }
         },

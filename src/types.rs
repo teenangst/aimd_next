@@ -1,26 +1,23 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ServerInfo {
-  #[serde(rename = "Map")]
-  pub map: String,
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct ServerInfo {
+//   pub map: String,
 
-  #[serde(rename = "Players")]
-  pub players: isize,
+//   pub players: isize,
 
-  #[serde(rename = "MaxPlayers")]
-  pub max_players: isize,
-}
+//   pub max_players: isize,
+// }
 
-impl Default for ServerInfo {
-  fn default() -> Self {
-    ServerInfo {
-      map: "".to_string(),
-      players: 0,
-      max_players: 0,
-    }
-  }
-}
+// impl Default for ServerInfo {
+//   fn default() -> Self {
+//     ServerInfo {
+//       map: "".to_string(),
+//       players: 0,
+//       max_players: 0,
+//     }
+//   }
+// }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Server {
@@ -28,6 +25,9 @@ pub struct Server {
   pub port: u16,
   pub name: String,
   pub nextmap: Option<String>,
-  pub info: Option<ServerInfo>,
+  // pub info: Option<ServerInfo>,
   pub fastdl: Option<String>,
+  pub map: String,
+  pub players: isize,
+  pub max_players: isize,
 }
